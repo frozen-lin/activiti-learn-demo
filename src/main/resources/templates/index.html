@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>index</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="./element-ui/index.css">
+</head>
+<body>
+<div id="app">
+    <el-tabs v-model="activeName" type="card" @tab-click="handleTabClick">
+        <el-tab-pane label="流程模型列表" name="modelListTab">
+            <el-row>
+                <el-button type="text" @click="newModel">新建模型</el-button>
+            </el-row>
+            <el-table :data="modelList" border style="width: 1451px;">
+                <el-table-column prop="id" label="模型编号" width="200">
+                </el-table-column>
+                <el-table-column prop="key" label="模型Key" width="200">
+                </el-table-column>
+                <el-table-column prop="name" label="模型名称" width="200">
+                </el-table-column>
+                <el-table-column prop="revision" label="版本" width="200">
+                </el-table-column>
+                <el-table-column prop="createTime" label="创建时间" width="200">
+                </el-table-column>
+                <el-table-column label="操作" width="450">
+                    <template slot-scope="scope">
+                        <el-row>
+                            <el-button @click="editModel(scope.row)" type="primary" size="small">编辑</el-button>
+                            <el-button @click="deleteModel(scope.row)" type="danger" size="small">删除</el-button>
+                            <el-button @click="deployModel(scope.row)" type="success" size="small">部署</el-button>
+                            <el-button @click="startProcess(scope.row)" type="success" size="small"
+                                       :disabled="scope.row.deploymentId===null">
+                                启动新流程
+                            </el-button>
+                        </el-row>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="流程部署列表" name="deploymentListTab">
+            <el-table :data="deploymentList" border style="width: 1201px">
+                <el-table-column prop="id" label="流程部署Id" width="250">
+                </el-table-column>
+                <el-table-column prop="name" label="名称" width="250">
+                </el-table-column>
+                <el-table-column prop="deploymentTime" label="部署时间" width="250">
+                </el-table-column>
+                <el-table-column label="操作" width="450">
+                    <template slot-scope="scope">
+                        <el-button @click="deleteDeployment(scope.row)" type="danger" size="small">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="任务列表" name="taskListTab">
+            <el-table :data="taskList" border style="width: 1251px">
+                <el-table-column prop="id" label="任务编号" width="200">
+                </el-table-column>
+                <el-table-column prop="name" label="任务名称" width="200">
+                </el-table-column>
+                <el-table-column prop="createTime" label="创建时间" width="200">
+                </el-table-column>
+                <el-table-column prop="assignee" label="受理人" width="200">
+                </el-table-column>
+                <el-table-column label="操作" width="450">
+                    <template slot-scope="scope">
+                        <el-button @click="submitTask(scope.row)" type="success" size="small">提交</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+<!-- import Vue before Element -->
+<script src="./js/lib/vue.js"></script>
+<script src="./js/lib/vue-resource.min.js"></script>
+<!-- import JavaScript -->
+<script src="./element-ui/index.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        methods: {
+            handleTabClick(){
+                switch (this.activeName) {
+                    case "modelListTab":this.queryModelData();break;
+                    case "deploymentListTab":this.queryDeploymentData();break;
+                    case "taskListTab":this.queryTaskData();break;
+                    default:break;
+                }
+            },
+            queryModelData(){
+                this.$http.get('/activiti/models').then(function({body}){
+                    this.modelList = body.data.dataList;
+                });
+            },
+            queryDeploymentData(){
+                this.$http.get('/activiti/deployments').then(function({body}){
+                    this.deploymentList = body.data.dataList;
+
+                });
+            },
+            queryTaskData(){
+                this.$http.get('/activiti/tasks').then(function({body}){
+                    this.taskList = body.data.dataList;
+                });
+            },
+            newModel(){
+                this.$http.post('/activiti/models/newModel').then(function({body}){
+                    const id = body.data;
+                    this.$message({
+                        showClose: true,
+                        message: body.respMsg,
+                        type: 'success'
+                    });
+                    this.queryModelData();
+                    this.editModel({id});
+                });
+            },
+            editModel({id}){
+                window.open(`/activiti/modeler.html?modelId=${id}`);
+            },
+            deleteModel({id}){
+                this.$http.delete(`/activiti/models/${id}`).then(function({body}){
+                    this.$message({
+                        showClose: true,
+                        message: body.respMsg,
+                        type: 'success'
+                    });
+                    this.queryModelData();
+                });
+            },
+            deployModel({id}){
+                this.$http.post(`/activiti/models/deploy/${id}`).then(function({body}){
+                    this.$message({
+                        showClose: true,
+                        message: body.respMsg,
+                        type: 'success'
+                    });
+                    this.queryModelData();
+                });
+            },
+            startProcess({key}){
+                this.$http.post(`/activiti/models/startProcess/${key}`).then(function({body}){
+                    this.$message({
+                        showClose: true,
+                        message: body.respMsg,
+                        type: 'success'
+                    });
+                    this.queryModelData();
+                });
+            },
+            deleteDeployment({id}){
+                this.$http.delete(`/activiti/deployments/${id}`).then(function({body}){
+                    this.$message({
+                        showClose: true,
+                        message: body.respMsg,
+                        type: 'success'
+                    });
+                    this.queryDeploymentData();
+                });
+            },
+            submitTask({id}){
+                this.$prompt('请输入流程参数', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                }).then(({ value }) => {
+                    let param = {};
+                    if(value){
+                        param = JSON.parse(value);
+                    }
+                    this.$http.post(`/activiti/tasks/commit/${id}`,param).then(function({body}){
+                        this.$message({
+                            showClose: true,
+                            message: body.respMsg,
+                            type: 'success'
+                        });
+                        this.queryTaskData();
+                    });
+                }).catch(()=>{});
+            },
+        },
+        data: function () {
+            return {
+                activeName: 'modelListTab',
+                modelList: [],
+                deploymentList: [],
+                taskList: [],
+            }
+        },
+        created(){
+            this.queryModelData();
+        }
+    })
+</script>
+</body>
+</html>
